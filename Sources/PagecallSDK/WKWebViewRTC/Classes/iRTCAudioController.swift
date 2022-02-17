@@ -43,8 +43,7 @@ class iRTCAudioController {
 
 	  See: https://developer.apple.com/documentation/avfoundation/avaudiosession/mode/1616455-voicechat
 	 */
-	static private var audioMode = AVAudioSession.Mode.voiceChat
-	static private var audioModeDefault : AVAudioSession.Mode = AVAudioSession.Mode.default
+	static private var audioMode = AVAudioSession.Mode.videoChat
 
 	static private var audioInputSelected: AVAudioSessionPortDescription? = nil
 	
@@ -177,11 +176,7 @@ class iRTCAudioController {
 	static private var speakerEnabled: Bool = false
 	
 	init() {
-        let shouldManualInit = Bundle.main.object(forInfoDictionaryKey: "ManualInitAudioDevice") as? String
-    
-        if(shouldManualInit == "FALSE") {
-            iRTCAudioController.initAudioDevices()
-        }
+        iRTCAudioController.initAudioDevices()
 		
 		NotificationCenter.default.addObserver(
 			self,
@@ -202,5 +197,7 @@ class iRTCAudioController {
 		default:
 			break
 		}
+        
+        iRTCAudioController.setCategory()
 	}
 }
