@@ -73,20 +73,32 @@ class NativeBridge {
 
             switch action {
             case "connect":
-                print("connect")
+                print("Bridge: connect")
                 if let payloadData = payload?.data(using: .utf8) {
-                    self.ChimeController.connect(joinMeetingData: payloadData)
+                    self.ChimeController.connect(joinMeetingData: payloadData) { (_: Bool) in self.response(requestId: requestId) }
                 }
             case "pauseAudio":
-                print("pause audio")
+                print("Bridge: pauseAudio")
+                self.ChimeController.pauseAudio()
             case "resumeAudio":
-                print("resume audio")
+                print("Bridge: resumeAudio")
+                self.ChimeController.resumeAudio()
             case "setAudioDevice":
-                print("set audio device")
+                print("Bridge: setAudioDevice")
+                if let payloadData = payload?.data(using: .utf8) {
+                    self.ChimeController.setAudioDevice(deviceData: payloadData) { (isGood: Bool) in print(isGood) }
+                }
+
             case "getAudioDevices":
-                print("get audio devices")
-                let data = try JSONSerialization.data(withJSONObject: [])
-                self.response(requestId: requestId, data: data)
+                print("Bridge: getAudioDevices")
+                self.ChimeController.getAudioDevices {
+                    (mediaDeviceInfoList: [MediaDeviceInfo]) in do {
+                            let data = try JSONEncoder().encode(mediaDeviceInfoList)
+                            self.response(requestId: requestId, data: data)
+                        } catch {
+                            print("failed to getAudioDevices")
+                        }
+                }
             default:
                 break
             }
