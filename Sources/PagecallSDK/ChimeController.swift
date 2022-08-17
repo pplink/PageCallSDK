@@ -11,8 +11,11 @@ import Foundation
 
 class ChimeController {
     var meetingSession: DefaultMeetingSession?
+    let emitter: WebViewEmitter
 
-    init() {
+    init(emitter: WebViewEmitter) {
+        self.emitter = emitter
+
         AVAudioSession.sharedInstance().requestRecordPermission { granted in
             if granted {
                 print("granted")
@@ -36,8 +39,7 @@ class ChimeController {
         let meetingSession = DefaultMeetingSession(configuration: meetingSessionConfiguration, logger: logger)
         self.meetingSession = meetingSession
 
-        let audioDevices = meetingSession.audioVideo.listAudioDevices()
-        print(audioDevices)
+        meetingSession.audioVideo.addRealtimeObserver(observer: ChimeRealtimeObserver(emitter: self.emitter, myAttendeeId: meetingSession.configuration.credentials.attendeeId))
 
         do { try meetingSession.audioVideo.start()
             print("succeed")

@@ -8,13 +8,14 @@
 import Foundation
 import WebKit
 
-class NativeBridge {
+enum BridgeEvent: String, Codable {
+    case audioDevices, audioVolume, audioStatus, mediaStat, audioEnded, videoEnded, screenshareEnded, meetingEnded, error
+}
+
+class WebViewEmitter {
     let webview: WKWebView
-    let ChimeController: ChimeController = .init()
 
-    init(webview: WKWebView) { self.webview = webview }
-
-    func emit(eventName: String) {
+    func emit(eventName: BridgeEvent) {
         self.webview.evaluateJavaScript("window.PagecallNative.emit('\(eventName)')") { _, error in
             if let error = error {
                 NSLog("Failed to PagecallNative.emit \(error)")
@@ -22,14 +23,34 @@ class NativeBridge {
         }
     }
 
-    func emit(eventName: String, data: Data) {
-        if let string = String(data: data, encoding: .utf8) {
-            self.webview.evaluateJavaScript("window.PagecallNative.emit('\(eventName)','\(string)')") { _, error in
-                if let error = error {
-                    NSLog("Failed to PagecallNative.emit \(error)")
-                }
+    func emit(eventName: BridgeEvent, message: String) {
+        self.webview.evaluateJavaScript("window.PagecallNative.emit('\(eventName)','\(message)')") { _, error in
+            if let error = error {
+                NSLog("Failed to PagecallNative.emit \(error)")
             }
         }
+    }
+
+    func emit(eventName: BridgeEvent, data: Data) {
+        if let string = String(data: data, encoding: .utf8) {
+            self.emit(eventName: eventName, message: string)
+        }
+    }
+
+    init(webView: WKWebView) {
+        self.webview = webView
+    }
+}
+
+class NativeBridge {
+    let webview: WKWebView
+    let emitter: WebViewEmitter
+    let ChimeController: ChimeController
+
+    init(webview: WKWebView) {
+        self.webview = webview
+        self.emitter = .init(webView: self.webview)
+        self.ChimeController = .init(emitter: self.emitter)
     }
 
     func response(requestId: String?) {
