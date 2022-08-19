@@ -10,8 +10,8 @@ import AVFoundation
 import Foundation
 
 class ChimeController {
-    var meetingSession: DefaultMeetingSession?
     let emitter: WebViewEmitter
+    var chimeMeetingSession: ChimeMeetingSession?
 
     init(emitter: WebViewEmitter) {
         self.emitter = emitter
@@ -25,80 +25,79 @@ class ChimeController {
         }
     }
 
-    func connect(joinMeetingData: Data, callback: ((Bool) -> Void)? = nil) {
+    func connect(joinMeetingData: Data, callback: (Error?) -> Void) {
         let logger = ConsoleLogger(name: "DefaultMeetingSession", level: LogLevel.INFO)
 
         let meetingSessionConfiguration = JoinRequestService.getMeetingSessionConfiguration(data: joinMeetingData)
 
         guard let meetingSessionConfiguration = meetingSessionConfiguration else {
-            logger.error(msg: "Failed to parse meetingSessionConfiguration")
-            callback?(false)
+            callback(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to parse joinMeetingData"]))
             return
         }
 
-        let meetingSession = DefaultMeetingSession(configuration: meetingSessionConfiguration, logger: logger)
-        self.meetingSession = meetingSession
+        self.chimeMeetingSession = ChimeMeetingSession(configuration: meetingSessionConfiguration, logger: logger, emitter: self.emitter)
 
-        meetingSession.audioVideo.addRealtimeObserver(observer: ChimeRealtimeObserver(emitter: self.emitter, myAttendeeId: meetingSession.configuration.credentials.attendeeId))
+        callback(nil)
+    }
 
-        do { try meetingSession.audioVideo.start()
-            print("succeed")
-            callback?(true)
-        } catch {
-            print(error)
-            callback?(false)
+    func pauseAudio(callback: (Error?) -> Void) {
+        if let chimeMeetingSession = self.chimeMeetingSession {
+            let isSucceed = chimeMeetingSession.pauseAudio()
+            if isSucceed {
+                callback(nil)
+            } else {
+                callback(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed at chimeMeetingSession.pauseAudio"]))
+            }
+        } else {
+            callback(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "ChimeMeetingSession not exist"]))
         }
     }
 
-    func pauseAudio(callback: ((Bool) -> Void)? = nil) {
-        let isSucceed = self.meetingSession?.audioVideo.realtimeLocalMute() ?? false
-        callback?(isSucceed)
+    func resumeAudio(callback: (Error?) -> Void) {
+        if let chimeMeetingSession = self.chimeMeetingSession {
+            let isSucceed = chimeMeetingSession.resumeAudio()
+            if isSucceed {
+                callback(nil)
+            } else {
+                callback(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed at chimeMeetingSession.pauseAudio"]))
+                return
+            }
+        } else {
+            callback(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "ChimeMeetingSession not exist"]))
+        }
     }
 
-    func resumeAudio(callback: ((Bool) -> Void)? = nil) {
-        let isSucceed = self.meetingSession?.audioVideo.realtimeLocalUnmute() ?? false
-        callback?(isSucceed)
-    }
-
-    func setAudioDevice(deviceData: Data, callback: ((Bool) -> Void)? = nil) {
+    func setAudioDevice(deviceData: Data, callback: (Error?) -> Void) {
         let jsonDecoder = JSONDecoder()
         struct DeviceId: Codable {
             var deviceId: String
         }
 
-        let deviceId = try? jsonDecoder.decode(DeviceId.self, from: deviceData)
-
-        guard let meetingSession = self.meetingSession else {
-            print("failed to setAudioDevice: meetingSession not exist")
-            callback?(false)
+        guard let deviceId = try? jsonDecoder.decode(DeviceId.self, from: deviceData) else {
+            callback(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "DeviceId not exist"]))
             return
         }
 
-        let audioDevices = meetingSession.audioVideo.listAudioDevices()
-
-        let audioDevice = audioDevices.first { mediaDevice in mediaDevice.label == deviceId?.deviceId }
-        guard let audioDevice = audioDevice else {
-            print("failed to find mediaDevice with label")
-            callback?(false)
+        guard let chimeMeetingSession = self.chimeMeetingSession else {
+            callback(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "ChimeMeetingSession not exist"]))
             return
         }
 
-        meetingSession.audioVideo.chooseAudioDevice(mediaDevice: audioDevice)
-        callback?(true)
+        chimeMeetingSession.setAudioDevice(label: deviceId.deviceId)
+        callback(nil)
     }
 
-    func getAudioDevices(callback: ([MediaDeviceInfo]) -> Void) {
-        let audioDevices = self.meetingSession?.audioVideo.listAudioDevices()
+    func getAudioDevices() -> [MediaDeviceInfo] {
+        let audioDevices = self.chimeMeetingSession?.getAudioDevices()
 
         guard let audioDevices = audioDevices else {
-            callback([])
-            return
+            return []
         }
 
         let audioDeviceInfoList = audioDevices.map { mediaDevice in
             MediaDeviceInfo(deviceId: mediaDevice.label, groupId: "DefaultGroupId", kind: .audioinput, label: mediaDevice.label)
         }
 
-        callback(audioDeviceInfoList)
+        return audioDeviceInfoList
     }
 }
