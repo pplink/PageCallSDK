@@ -45,12 +45,12 @@ class WebViewEmitter {
 class NativeBridge {
     let webview: WKWebView
     let emitter: WebViewEmitter
-    let ChimeController: ChimeController
+    let chimeController: ChimeController
 
     init(webview: WKWebView) {
         self.webview = webview
         self.emitter = .init(webView: self.webview)
-        self.ChimeController = .init(emitter: self.emitter)
+        self.chimeController = .init(emitter: self.emitter)
     }
 
     func response(requestId: String?) {
@@ -96,23 +96,23 @@ class NativeBridge {
             case "connect":
                 print("Bridge: connect")
                 if let payloadData = payload?.data(using: .utf8) {
-                    self.ChimeController.connect(joinMeetingData: payloadData) { (_: Bool) in self.response(requestId: requestId) }
+                    self.chimeController.connect(joinMeetingData: payloadData) { (_: Bool) in self.response(requestId: requestId) }
                 }
             case "pauseAudio":
                 print("Bridge: pauseAudio")
-                self.ChimeController.pauseAudio()
+                self.chimeController.pauseAudio()
             case "resumeAudio":
                 print("Bridge: resumeAudio")
-                self.ChimeController.resumeAudio()
+                self.chimeController.resumeAudio()
             case "setAudioDevice":
                 print("Bridge: setAudioDevice")
                 if let payloadData = payload?.data(using: .utf8) {
-                    self.ChimeController.setAudioDevice(deviceData: payloadData) { (isGood: Bool) in print(isGood) }
+                    self.chimeController.setAudioDevice(deviceData: payloadData) { (isGood: Bool) in print(isGood) }
                 }
 
             case "getAudioDevices":
                 print("Bridge: getAudioDevices")
-                self.ChimeController.getAudioDevices {
+                self.chimeController.getAudioDevices {
                     (mediaDeviceInfoList: [MediaDeviceInfo]) in do {
                             let data = try JSONEncoder().encode(mediaDeviceInfoList)
                             self.response(requestId: requestId, data: data)
