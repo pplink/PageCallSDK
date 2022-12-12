@@ -35,6 +35,7 @@
 @property (nonatomic, assign) NSString* audioHostUrl;
 @property (nonatomic, assign) BOOL isUsingInbandTurnCreds;
 @property (nonatomic, assign) BOOL isDisablingSimulcastP2P;
+@property (nonatomic, assign) BOOL isUsingNewSignalingClient;
 @end
 
 @interface DataMessageInternal : NSObject
@@ -106,6 +107,7 @@
 // send data message
 - (void)sendDataMessage:(NSString*)topic
                    data:(const char*)data
+                dataLen:(uint32_t)dataLen
              lifetimeMs:(int)lifetimeMs;
 
 - (void)setExternalVideoSource:(NSObject<VideoSourceInternal>*)source;
@@ -121,7 +123,7 @@
 
 - (void)setSimulcast:(bool)simulcastEnabled;
 
-- (void)setMaxBitRateKbps:(int)maxBitRate;
+- (void)setMaxBitRateKbps:(uint32_t)maxBitRate;
 
 @end
 
